@@ -115,6 +115,54 @@ int main(int argc, char* argv[]) {
                     }
                 break;
 
+                case SDL_JOYAXISMOTION:
+                    if(event.jaxis.axis==1) { //up down
+                        if(event.jaxis.value < 0){ 
+                            key_input.w &= ~BTN_U;
+                        }else if(event.jaxis.value > 0){ 
+                            key_input.w &= ~BTN_D;
+                        }else {
+                            key_input.w |= BTN_U;
+                            key_input.w |= BTN_D;
+                        }   
+                    }   
+                    if(event.jaxis.axis==0) { //left right
+                        if(event.jaxis.value < 0){ 
+                            key_input.w &= ~BTN_L;
+                        }else if(event.jaxis.value > 0){ 
+                            key_input.w &= ~BTN_R;
+                        }else {
+                            key_input.w |= BTN_L;
+                            key_input.w |= BTN_R;
+                        }   
+                    }   
+
+                break;
+
+                case SDL_JOYBUTTONDOWN:
+                    switch (event.jbutton.button) {
+                        case 1:     key_input.w &= ~BTN_A;   break;
+                        case 2:     key_input.w &= ~BTN_B;   break;
+                        case 4:     key_input.w &= ~BTN_LT;  break;
+                        case 5:     key_input.w &= ~BTN_RT;  break;
+                        case 8:     key_input.w &= ~BTN_SEL; break;
+                        case 9:     key_input.w &= ~BTN_STA; break;
+                        default:                                   break;
+                    }   
+                break;
+
+                case SDL_JOYBUTTONUP:
+                    switch (event.jbutton.button) {
+                        case 1:     key_input.w |= BTN_A;   break;
+                        case 2:     key_input.w |= BTN_B;   break;
+                        case 4:     key_input.w |= BTN_LT;  break;
+                        case 5:     key_input.w |= BTN_RT;  break;
+                        case 8:     key_input.w |= BTN_SEL; break;
+                        case 9:     key_input.w |= BTN_STA; break;
+                        default:                                   break;
+                    }
+                break;
+
                 case SDL_QUIT: run = false; break;
             }
         }
