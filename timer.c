@@ -29,7 +29,7 @@ void timers_clock(uint32_t cycles) {
 
         if ((overflow = (tmr[idx].count.w > 0xffff))) {
             tmr[idx].count.w = tmr[idx].reload.w + (tmr[idx].count.w - 0x10000);
-
+/*  //zlp for performance
             if (((snd_pcm_vol.w >> 10) & 1) == idx) {
                 //DMA Sound A FIFO
                 fifo_a_load();
@@ -42,7 +42,8 @@ void timers_clock(uint32_t cycles) {
                 fifo_b_load();
 
                 if (fifo_b_len <= 0x10) dma_transfer_fifo(2);
-            }
+            } 
+*/
         }
 
         if ((tmr[idx].ctrl.w & TMR_IRQ) && overflow)

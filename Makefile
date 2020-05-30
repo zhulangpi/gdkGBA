@@ -1,7 +1,7 @@
 TARGET = gdkGBA
 LIBS = $(CLIBS) -lSDL2
 CC = gcc
-CFLAGS = -std=c99 -g -Wall -Ofast
+CFLAGS =  -g -Wall -Ofast
 
 .PHONY: default all clean
 

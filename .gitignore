@@ -52,4 +52,4 @@ dkms.conf
 
 # GBA ROMs
 *.gba
-*.bin
+#*.bin

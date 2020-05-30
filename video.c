@@ -24,7 +24,7 @@ static void render_obj(uint8_t prio) {
     uint8_t obj_index;
     uint32_t offset = 0x3f8;
 
-    uint32_t surf_addr = v_count.w * 240 * 4;
+    uint32_t surf_addr = v_count.w * 240 << 2;
 
     for (obj_index = 0; obj_index < 128; obj_index++) {
         uint16_t attr0 = oam[offset + 0] | (oam[offset + 1] << 8);
@@ -50,7 +50,7 @@ static void render_obj(uint8_t prio) {
         pb = pc = 0x000; //0.0
 
         if (affine) {
-            uint32_t p_base = affine_p * 32;
+            uint32_t p_base = affine_p << 5;
 
             pa = oam[p_base + 0x06] | (oam[p_base + 0x07] << 8);
             pb = oam[p_base + 0x0e] | (oam[p_base + 0x0f] << 8);
@@ -63,17 +63,17 @@ static void render_obj(uint8_t prio) {
         uint8_t x_tiles = x_tiles_lut[lut_idx];
         uint8_t y_tiles = y_tiles_lut[lut_idx];
 
-        int32_t rcx = x_tiles * 4;
-        int32_t rcy = y_tiles * 4;
+        int32_t rcx = x_tiles << 2;
+        int32_t rcy = y_tiles << 2;
 
         if (affine && dbl_size) {
-            rcx *= 2;
-            rcy *= 2;
+            rcx <<= 1;
+            rcy <<= 1;
         }
 
-        if (obj_y + rcy * 2 > 0xff) obj_y -= 0x100;
+        if (obj_y + (rcy << 1) > 0xff) obj_y -= 0x100;
 
-        if (obj_y <= (int32_t)v_count.w && (obj_y + rcy * 2 > v_count.w)) {
+        if (obj_y <= (int32_t)v_count.w && (obj_y + (rcy << 1) > v_count.w)) {
             uint8_t  obj_mode = (attr0 >> 10) & 0x3;
             bool     mosaic   = (attr0 >> 12) & 0x1;
             bool     is_256   = (attr0 >> 13) & 0x1;
@@ -83,14 +83,14 @@ static void render_obj(uint8_t prio) {
             uint16_t chr_numb = (attr2 >>  0) & 0x3ff;
             uint8_t  chr_pal  = (attr2 >> 12) & 0xf;
 
-            uint32_t chr_base = 0x10000 | chr_numb * 32;
+            uint32_t chr_base = 0x10000 | (chr_numb << 5);
 
             obj_x <<= 7;
             obj_x >>= 7;
 
             int32_t x, y = v_count.w - obj_y;
 
-            if (!affine && flip_y) y ^= (y_tiles * 8) - 1;
+            if (!affine && flip_y) y ^= (y_tiles << 3) - 1;
 
             uint8_t tsz = is_256 ? 64 : 32; //Tile block size (in bytes, = (8 * 8 * bpp) / 8)
             uint8_t lsz = is_256 ?  8 :  4; //Pixel line row size (in bytes)
@@ -99,15 +99,15 @@ static void render_obj(uint8_t prio) {
             int32_t oy = pc * -rcx + pd * (y - rcy) + (y_tiles << 10);
 
             if (!affine && flip_x) {
-                ox = (x_tiles * 8 - 1) << 8;
+                ox = ( (x_tiles << 3) - 1) << 8;
                 pa = -0x100;
             }
 
             uint32_t tys = (disp_cnt.w & MAP_1D_FLAG) ? x_tiles * tsz : 1024; //Tile row stride
 
-            uint32_t address = surf_addr + obj_x * 4;
+            uint32_t address = surf_addr + (obj_x << 2);
 
-            for (x = 0; x < rcx * 2;
+            for (x = 0; x < (rcx << 1);
                 x++,
                 ox += pa,
                 oy += pc,
@@ -133,14 +133,14 @@ static void render_obj(uint8_t prio) {
                     chr_y    * lsz;
 
                 if (is_256) {
-                    vram_addr = chr_addr + tile_x * 64 + chr_x;
+                    vram_addr = chr_addr + (tile_x << 6) + chr_x;
                     pal_idx   = vram[vram_addr];
                 } else {
-                    vram_addr = chr_addr + tile_x * 32 + (chr_x >> 1);
-                    pal_idx   = (vram[vram_addr] >> (chr_x & 1) * 4) & 0xf;
+                    vram_addr = chr_addr + (tile_x << 5) + (chr_x >> 1);
+                    pal_idx   = (vram[vram_addr] >> ( (chr_x & 1) <<2 ) ) & 0xf;
                 }
 
-                uint32_t pal_addr = 0x100 | pal_idx | (!is_256 ? chr_pal * 16 : 0);
+                uint32_t pal_addr = 0x100 | pal_idx | (!is_256 ? (chr_pal << 4) : 0);
 
                 if (pal_idx) *(uint32_t *)(screen + address) = palette[pal_addr];
             }
@@ -153,7 +153,7 @@ static const uint8_t bg_enb[3] = { 0xf, 0x7, 0xc };
 static void render_bg() {
     uint8_t mode = disp_cnt.w & 7;
 
-    uint32_t surf_addr = v_count.w * 240 * 4;
+    uint32_t surf_addr = v_count.w * 240 << 2;
 
     switch (mode) {
         case 0:
@@ -216,7 +216,7 @@ static void render_bg() {
 
                             uint32_t map_addr = scrn_base + tmy * tms + tmx;
 
-                            uint32_t vram_addr = chr_base + vram[map_addr] * 64 + chr_y * 8 + chr_x;
+                            uint32_t vram_addr = chr_base + ( vram[map_addr] << 6) + (chr_y << 3) + chr_x;
 
                             uint16_t pal_idx = vram[vram_addr];
 
@@ -240,12 +240,12 @@ static void render_bg() {
                             uint16_t pal_idx;
                             uint16_t pal_base = 0;
 
-                            uint32_t map_addr = scrn_base + (tmy & 0x1f) * 32 * 2 + (tmx & 0x1f) * 2;
+                            uint32_t map_addr = scrn_base + ( (tmy & 0x1f) << (5+1) ) + ( (tmx & 0x1f) << 1 );
 
                             switch (scrn_size) {
-                                case 1: map_addr += scrn_x * 2048; break;
-                                case 2: map_addr += scrn_y * 2048; break;
-                                case 3: map_addr += scrn_x * 2048 + scrn_y * 4096; break;
+                                case 1: map_addr += (scrn_x << 11); break;
+                                case 2: map_addr += (scrn_y << 11); break;
+                                case 3: map_addr += (scrn_x << 11) + (scrn_y << 12); break;
                             }
 
                             uint16_t tile = vram[map_addr + 0] | (vram[map_addr + 1] << 8);
@@ -255,7 +255,7 @@ static void render_bg() {
                             bool     flip_y   = (tile >> 11) & 0x1;
                             uint8_t  chr_pal  = (tile >> 12) & 0xf;
 
-                            if (!is_256) pal_base = chr_pal * 16;
+                            if (!is_256) pal_base = (chr_pal << 4);
 
                             if (flip_x) chr_x ^= 7;
                             if (flip_y) chr_y ^= 7;
@@ -263,11 +263,11 @@ static void render_bg() {
                             uint32_t vram_addr;
 
                             if (is_256) {
-                                vram_addr = chr_base + chr_numb * 64 + chr_y * 8 + chr_x;
+                                vram_addr = chr_base + (chr_numb << 6) + (chr_y << 3) + chr_x;
                                 pal_idx   = vram[vram_addr];
                             } else {
-                                vram_addr = chr_base + chr_numb * 32 + chr_y * 4 + (chr_x >> 1);
-                                pal_idx   = (vram[vram_addr] >> (chr_x & 1) * 4) & 0xf;
+                                vram_addr = chr_base + (chr_numb << 5) + (chr_y << 2) + (chr_x >> 1);
+                                pal_idx   = (vram[vram_addr] >> ((chr_x & 1)<<2) ) & 0xf;
                             }
 
                             uint32_t pal_addr = pal_idx | pal_base;
